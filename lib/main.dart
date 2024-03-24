@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:untitled2/Home/SearchSatellite.dart';
+import 'package:untitled2/Home/Splashscreen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,12 +13,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'SatTrack',
       theme: ThemeData(
+        scaffoldBackgroundColor: Colors.black,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: SearchSatellite()
+      home: SplashScreen()
     );
   }
 }

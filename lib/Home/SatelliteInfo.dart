@@ -1,12 +1,18 @@
-import 'dart:async';
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lottie/lottie.dart';
 import 'package:untitled2/api/SatNOGSApiService.dart';
 import 'package:http/http.dart' as http;
+import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 class SatelliteInfoPage extends StatefulWidget {
-  const SatelliteInfoPage({Key? key, this.id}) : super(key: key);
+  const SatelliteInfoPage({Key? key, this.id, this.satName}) : super(key: key);
   final id;
+  final satName;
 
   @override
   _SatelliteInfoPageState createState() => _SatelliteInfoPageState();
@@ -22,6 +28,7 @@ class _SatelliteInfoPageState extends State<SatelliteInfoPage> {
   void initState() {
     super.initState();
     fetchDataFuture = fetchData();
+    audioUrl = '';
   }
 
   Future<Map<String, String>> fetchData() async {
@@ -71,84 +78,251 @@ class _SatelliteInfoPageState extends State<SatelliteInfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('ID: ${extractNumericPortion(widget.id)} Info'),
-      ),
-      body: SingleChildScrollView(
-        child: Center(
-          child: FutureBuilder(
-            future: fetchData(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator(); // Show progress indicator while loading data
-              } else if (snapshot.hasError) {
-                return Text('Error: ${snapshot.error}');
-              } else {
-                Map<String, String> data = snapshot.data as Map<String, String>;
-                imageUrl = data['imageUrl']!;
-                audioUrl = data['audioUrl']!;
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: Text(
-                        'Image URL:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20.0,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20.0),
-                      child: FutureBuilder(
-                        future: loadImage(imageUrl),
-                        builder: (context, imageSnapshot) {
-                          if (imageSnapshot.connectionState == ConnectionState.waiting) {
-                            return CircularProgressIndicator(); // Show progress indicator while loading image
-                          } else if (imageSnapshot.hasError) {
-                            return Text('Error: ${imageSnapshot.error}');
-                          } else {
-                            return Image.network(imageUrl, height: 400, width: 400);
-                          }
-                        },
-                      ),
-                    ),
-                    SizedBox(height: 20.0),
-                    Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: Text(
-                        'Audio URL:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20.0,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20.0),
-                      child: Text(
-                        audioUrl,
-                        style: TextStyle(fontSize: 16.0),
-                      ),
-                    ),
-                    SizedBox(height: 20.0),
-                    ElevatedButton(
-                      onPressed: playAudio,
-                      child: Text('Play Audio'),
-                    ),
-                  ],
-                );
-              }
-            },
+    double screenHeight = MediaQuery
+        .of(context)
+        .size
+        .height;
+    double screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
+    return DefaultTabController(
+      length: 2, // Number of tabs
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
           ),
+          title: Text(
+            'ID: ${extractNumericPortion(widget.id)} Info',
+            style: GoogleFonts.spaceMono(
+              color: Colors.white,
+              fontSize: 20.0,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: Colors.black,
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Image'),
+              Tab(text: 'Audio'),
+            ],
+            labelColor: Colors.white,
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  FutureBuilder(
+                    future: fetchDataFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(
+                            heightFactor: 4,
+                            child: Lottie.asset('assets/lottie/loading.json',
+                                height: 200, width: 200)
+                        ); // Show progress indicator while loading data
+                      } else if (snapshot.hasError) {
+                        return Text(
+                          'Error: ${snapshot.error}',
+                          style: GoogleFonts.spaceMono(),
+                        );
+                      } else {
+                        Map<String, String> data = snapshot.data as Map<
+                            String,
+                            String>;
+                        imageUrl = data['imageUrl']!;
+                        audioUrl = data['audioUrl']!;
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text(
+                                '${widget.satName} WaterFall Graph:',
+                                style: GoogleFonts.spaceMono(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16.0,
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20.0),
+                              child: FutureBuilder(
+                                future: loadImage(imageUrl),
+                                builder: (context, imageSnapshot) {
+                                  if (imageSnapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return Lottie.asset(
+                                        'assets/lottie/loading.json',
+                                        height: 200, width: 200);
+                                  } else if (imageSnapshot.hasError) {
+                                    return Text(
+                                      'Error: ${imageSnapshot.error}',
+                                      style: GoogleFonts.spaceMono(),
+                                    );
+                                  } else {
+                                    return Column(
+                                      children: [
+                                        Image.network(imageUrl, height: screenWidth, width: screenHeight*0.5),
+                                        SizedBox(height: 20.0),
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                              left: 40.0, right: 40.0),
+                                          child: GestureDetector(
+                                            onTap: () async {
+                                              if (await canLaunchUrl(Uri.parse(imageUrl))) {
+                                                await launchUrl(Uri.parse(imageUrl));
+                                              } else {
+                                                throw 'Could not launch $imageUrl';
+                                              }
+                                            },
+                                            child: Container(
+                                              width: screenWidth,
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: Colors.blue,
+                                                borderRadius: BorderRadius
+                                                    .circular(10),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment
+                                                    .center,
+                                                children: [
+                                                  Icon(Icons.link,
+                                                      color: Colors.white),
+                                                  SizedBox(width: 5),
+                                                  // Add spacing between icon and text
+                                                  Text(
+                                                    'View Image in Browser',
+                                                    style: GoogleFonts
+                                                        .spaceMono(
+                                                      fontSize: 14.0,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text(
+                      'Audio',
+                      style: GoogleFonts.spaceMono(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 20.0,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Text(
+                      audioUrl,
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 16.0, color: Colors.white,),
+                    ),
+                  ),
+                  SizedBox(height: 20.0),
+                  Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: SizedBox(
+                          width: screenWidth,
+                          child: ElevatedButton(
+                            onPressed: playAudio,
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                              backgroundColor: Colors.blue,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Icon(Icons.play_arrow, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Play Audio',
+                                  style: GoogleFonts.spaceMono(
+                                    fontSize: 16.0,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: SizedBox(
+                          width: screenWidth,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (await canLaunch(audioUrl)) {
+                                await launch(audioUrl);
+                              } else {
+                                throw 'Could not launch $audioUrl';
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                              backgroundColor: Colors.blue,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Icon(Icons.link, color: Colors.white),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Open Link on Web',
+                                  style: GoogleFonts.spaceMono(
+                                    fontSize: 16.0,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-
-
 }
+
